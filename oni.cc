@@ -11,7 +11,7 @@
 #include <L293D.h> // **Modified**
 
 
-//PS2 controller pins
+//PS2 controller pins 
 #define PS2_DAT 14
 #define PS2_CMD 15
 #define PS2_SEL 16 //yellow
@@ -19,8 +19,17 @@
 
 #define pressures 	true  //button pressures
 #define rumble 		true  //controller vibration
-const int buzzerPin = 6; //buzzer pin
+
+const boolean MOVE_ENGINE = true; //boolean for actually moving engines. If false, does all the math, but doesn't move the engines at the end
+const boolean DEBUG_STICK = false; //if enabled, prints input, curvature math data and motor values
+const boolean DEBUG_LOOP = false; //if enabled, prints loop time statistics
+
+boolean calibrationMode = false; //calibration mode starts as false and can be enabled by pressing a few buttons at the same time
+byte engineDeadzoneOffset = 0; //engine deadzone compensation
+const int buzzerPin = 6; //buzzer pin 340Hz for horn
 const int warningPin = 13; //this pin lights up when a loop takes longer than it should. If this happens a lot of times, inputs may appear laggy. False positive for fast reconnections and some weird semi-connected states, reset after new controller configuration.
+byte error;
+byte type;
 byte oldError = 255; //started at -1 to mark the first time detectController() runs
 byte oldType = 255;
 const int checkInterval = 50; //time between controller detections (milliseconds)
@@ -48,8 +57,9 @@ PS2X ps2x; //starts a 'PS2 controller' object
 void setup()
 {
 	Serial.begin(57600); //serial for debugs 'n stuff
-	detectController(); //check for controller on start up
-	pinMode(warningPin, OUTPUT); //pin for waning lag input caused by exceeded loop time
+	// Serial.println("Waking ONI...");
+	detectController(); //check for controller on start up 
+	pinMode(warningPin, OUTPUT); //pin for waning lag input caused by exceeded loop time 
 	pinMode(buzzerPin, OUTPUT); //buzzer pin
 }
 
@@ -57,47 +67,73 @@ void loop()
 {
 	//Time control for function executions
 	loopStartTime = millis();
-
+	
 	//Do a controller check on intervals
 	if  ((loopStartTime - previousCheck >= checkInterval) or (checkInterval == loopTime))
 	{
 		previousCheck = loopStartTime;
-		detectController();
+		checkController();
 	}
-
+	
 	//Skip loop if a supported controller was not found
 	if (!validController)
 	{
 		engR.set(0); //engines are stopped so they don't freak out when a controlled is unconnected in a weird way
 		engL.set(0); //for some reason, sometimes controller values are read after the controller is unconnected, resulting in some messed up data
+		detectController();
 		return;
 	}
-
+	
+	if (ps2x.NewButtonState(PSB_R3) and ps2x.Button(PSB_R3)) //when button is pressed
+	{
+		//And not in calibration mode already
+		if (!calibrationMode)
+		{
+			//check if other buttons are pressed as well
+			if ( ps2x.Button(PSB_PAD_RIGHT) and ps2x.Button(PSB_SELECT) )
+			{
+				calibrationMode = true;
+				speedL, speedR = 0, 0;
+				for (int i=500;i<1800;i+=80)
+				{
+					tone(buzzerPin, i, 30);
+					delay(29);
+				}
+			}
+		}
+		else
+		{
+			tone(buzzerPin, 500, 1000);
+			engineDeadzoneOffset = speedL;
+			calibrationMode = false;
+		}
+	}
+	
 	//Read controller and set vibration speed for large motor based on blue 'X' pressure.
 	ps2x.read_gamepad(false,ps2x.Analog(PSAB_CROSS));
-
+	
 	//Here comes the moves
-	moveEngines(true); //boolean for actually moving engines. If false, does all the math, but doesn't move the engines at the end
-
+	moveEngines();
+	
 	//Prints input, curvature math data and motor values
-	debugStickPrint(false); //boolean activates it
-
+	debugStickPrint();
+	
 	//This next function should always be the last one
-	loopTimer(false); //this function controls loop time. Boolean is for printing statistics
+	loopTimer(); //this function controls loop time
 }
 
-void loopTimer(boolean printLoopTimeStatistics)
+void loopTimer()
 {
 	//This function ensures that loop() runs every loopTime milliseconds
 	unsigned int loopDelay = millis() - loopStartTime; //processing time used in the loop
-	if (printLoopTimeStatistics == true)
+	if (DEBUG_LOOP) //should print loop time?
 		Serial.println(loopDelay);
-	if (loopDelay > loopTime) //if loop used processing time is greater than the defined loop time
+	if (loopDelay > loopTime) //if loop used processing time is greater than the defined loop time 
 	{
 		Serial.print("<<WARNING>> ");
 		Serial.print("**LOOP DELAY > LOOP TIME**"); //shouldn't happen, as it might cause input lag
 		Serial.println(" <<WARNING>>");
-		digitalWrite(warningPin,HIGH); //turn a high signal on the warn pin once it happens.
+		digitalWrite(warningPin,HIGH); //turn a high signal on the warn pin once it happens. 
 	}
 	else //if loopDelay was faster than loopTime...
 	{
@@ -105,9 +141,9 @@ void loopTimer(boolean printLoopTimeStatistics)
 	}
 }
 
-void debugStickPrint(boolean print)
+void debugStickPrint()
 {
-	if (!print) //are we supposed to spam serial monitor and waste CPU time? If not, stop right here
+	if (!DEBUG_STICK) //are we supposed to spam serial monitor and waste CPU time? If not, stop right here
 		return;
 
 	//Controller readings
@@ -135,15 +171,17 @@ void debugStickPrint(boolean print)
 	Serial.print("; speedL: ");
 	Serial.print(speedL);
 	Serial.print(" speedR: ");
-	Serial.println(speedR);
+	Serial.print(speedR);
+	Serial.print(" engineDeadzoneOffset: ");
+	Serial.println(engineDeadzoneOffset);
 }
 
 void detectController()
 {
 	// Serial.println("BEBUG: detectController()");
 	//Setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
-	byte error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
-	byte type = ps2x.readType();
+	error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
+	type = ps2x.readType();
 	if (error == 1)
 		type = 0; //when error is 1, sometimes type doesn't get updated
 	// Serial.print(error);
@@ -199,24 +237,49 @@ void detectController()
 		oldError = error;
 		oldType = type;
 	}
-
-	//Set validController variable
-	if (error == 1 or error == 2 or type == 2) //if not found, not accepting commands or guitar hero, then controller is not valid
-		validController = false;
-	else
-		validController = true;
-
-
 }
 
-void moveEngines(boolean move)
+void checkController()
+{
+	//Set validController variable
+	if (error == 1 or error == 2 or type == 2) //if not found, not accepting commands or guitar hero, then controller is not valid
+	{
+		validController = false; //no valid controller detected, stop here
+		return;
+	}
+	
+	//Analog values go to max or min when controller is connected or disconnected
+	//For some reason, the loop time grwos bigger when the controller is not properly connected, so we can use this to determine wheater we have a connection
+	if (digitalRead(warningPin) == 1) //if loopDelay was bigger than it should, check for analog states
+	{
+		if (ps2x.Analog(PSS_LX) == 0 and ps2x.Analog(PSS_LY) == 0 and ps2x.Analog(PSS_RX) == 0 and ps2x.Analog(PSS_RY) == 0) //when all sticks report 0. Happens when controller is partially connected
+		{
+			Serial.println("All on 0");
+			validController = false; //incorrect readings, stop here
+			return;
+		}
+		else if (ps2x.Analog(PSS_LX) == 255 and ps2x.Analog(PSS_LY) == 255 and ps2x.Analog(PSS_RX) == 255 and ps2x.Analog(PSS_RY) == 255) //when all sticks report 255. Happens when controller is unconnected
+		{
+			Serial.println("All on 255");
+			validController = false; //incorrect readings, stop here
+			return;
+		}
+	}
+	
+	validController = true; //if we got here, it must be okay
+}
+
+void moveEngines()
 {
 	curve = mapValues(ps2x.Analog(PSS_LX), false); //curves -> horizontal axis, left stick
 	accel = mapValues(ps2x.Analog(PSS_RY), true); //acceleration -> vertical axis, right stick
-
+	
 	//Set speed according to accel reading and curvatureSpeed to 0 in case of no curves
-	speedL = accel;
-	speedR = accel;
+	if (!calibrationMode)
+	{
+		speedL = accel; 
+		speedR = accel;
+	}
 	curvatureSpeed = 0;
 	int curvatureToSpeed = 0;
 	int curvatureToSpeedReversed = 0;
@@ -226,11 +289,39 @@ void moveEngines(boolean move)
 	//Calculate curvatureSpeed only if there is accel and curve
 	if (curve != 0 and accel != 0)
 		curvatureSpeed = float(map(int(((1 - pow(fabsf(pAccel),fabsf(pCurve))) + float(map(turnRate*fabsf(pCurve)*100 - turnRate*fabsf(pAccel)*50,-turnRate*50,turnRate*100,0,turnRate*100))/100)*100),0,100 + turnRate*100,0,100))/100; //really complicated stuff. There's a picture attached to the source code explaining this.
-		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse.
-		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse.
-
+		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse. 
+		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse. 
+	
+	if (calibrationMode)
+	{
+		if (ps2x.ButtonPressed(PSB_PAD_UP))
+		{
+			speedR++;
+			speedL++;
+		}
+		else if (ps2x.ButtonPressed(PSB_PAD_DOWN))
+		{
+			speedR--;
+			speedL--;
+		}
+		else if (ps2x.ButtonPressed(PSB_L1))
+		{
+			speedR+= 10;
+			speedL+= 10;
+		}
+		else if (ps2x.ButtonPressed(PSB_L2))
+		{
+			speedR-= 10;
+			speedL-= 10;
+		}
+		if (speedR > 255)
+			speedR = 255;
+		if (speedL > 255)
+			speedL = 255;
+	}
+	
 	//Setting speeds
-	if (accel > 0) //going forward
+	else if (accel > 0) //going forward
 	{
 		//For turning
 		if (curve > 0) //going right
@@ -254,14 +345,30 @@ void moveEngines(boolean move)
 			speedL = curvatureToSpeedReversed;
 		}
 	}
-
+	
 	//Actually move or just do math?
-	if (move)
+	if (calibrationMode)
 	{
-		engR.set(speedR);
-		engL.set(speedL);
+		if (ps2x.Button(PSB_CROSS))
+		{
+			engR.set(speedR);
+			engL.set(speedL);
+		}
+		else
+		{
+			engR.set(0);
+			engL.set(0);
+		}
 	}
-
+	else
+	{
+		if (MOVE_ENGINE)
+		{
+			engR.set(speedR);
+			engL.set(speedL);
+		}
+	}
+	
 	digitalWrite(buzzerPin, ps2x.Button(PSB_R3)); //control buzzer based on R3 state
 }
 
@@ -271,16 +378,16 @@ int mapValues(byte value, boolean invert)
 	if (value < 128)
 	{
 		if(invert == false)
-			return int(map(value,0,128,-255,0));
+			return int(map(value,0,128,-255, 0));
 		else
-			return int(map(value,0,128,-255,0))*-1;
+			return int(map(value,0,128,-255, 0))*-1;
 	}
 	else if (value > 128)
 	{
 		if (invert == false)
-			return int(map(value,128,255,0,255));
+			return int(map(value,128,255, 0,255));
 		else
-			return int(map(value,128,255,0,255))*-1;
+			return int(map(value,128,255, 0,255))*-1;
 	}
 	else
 		return 0;
@@ -298,7 +405,7 @@ pCurve = percentage of curve
 turnRate = calibration variable to tune the turns based on empirical observations
 curvatureSpeed = how sharp the turning is, its meant to depend on accel, curve and turnRate
 
-first data goes down when pAccel goes up.
+first data goes down when pAccel goes up. 
 	    goes   up   when pCurve goes up.
 min = 0: when pAccel is at maximum, that ignores pCurve.
 max = 1: when pAccel is close to 0(no curve if no speed) and pCurve is at maximum
