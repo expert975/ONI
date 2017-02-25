@@ -1,2 +1,0 @@
-# ONI
-Objeto Não Identificado
