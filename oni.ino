@@ -46,9 +46,11 @@ unsigned int clockCycleStartTime; //stores when last clock cycle started
 boolean longExecutionTime; //holds true when loop takes longer than definedClockTime
 
 //Controller variables
-unsigned int lastErrorTime;
-byte error;
-byte type;
+unsigned int controllerTimeOut = 1000; //how long should be an error sequence before a controller detection
+unsigned int firstErrorTime = 1; //stores the beginning of an error sequence
+unsigned int lastErrorTime = 1; //stores the last error occurrence
+byte error; //stores error code for controller detection
+byte type; //stores controller type
 
 
 void setup()
@@ -98,7 +100,7 @@ void clockControl()
 	}	
 }
 
-//checks if the controller is properly connected
+//Checks if the controller is properly connected
 void checkController()
 {
 	if (controllerEnabled) //if current mode uses controller
@@ -106,17 +108,22 @@ void checkController()
 		ps2x.read_gamepad(); //read controller
 		if (validController()) //if valid controller
 		{
-			
+			firstErrorTime = 1; //mark controller as valid this cycle
 		}
-		else
+		else //invalid readings
 		{
-			if (controllerMandatory) 
+			lastErrorTime = millis(); //store last error occurrence
+			if (firstErrorTime == 1) //if controller was valid on last cycle
 			{
-				
+				firstErrorTime = millis(); //store first error occurrence
 			}
-			else
+			else //if controller was not valid last cycle
 			{
-				
+				if (lastErrorTime - firstErrorTime > controllerTimeOut) //if invalid readings for more than controllerTimeOut
+				{
+					detectController(); //controller must be unconnected, detectController()
+					firstErrorTime == 1; //wait one more controllerTimeOut before next check
+				}
 			}
 		}
 	}
