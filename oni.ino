@@ -16,7 +16,7 @@
 #define PS2_CLK 17
 
 #define pressures 	true  //button pressures
-#define rumble 		true  //controller vibration
+#define rumble 		false  //controller vibration
 
 // Hardware setup
 PS2X ps2x; //starts a 'PS2 controller' object
@@ -25,8 +25,8 @@ PS2X ps2x; //starts a 'PS2 controller' object
 L293D engL(11,2,3); //left engine
 L293D engR(12,7,8); //right engine
 
-byte systemBuzzerPin = 6; //main buzzer
-byte chargerKeyPin = 5; //enables charge mode
+byte systemBuzzerPin = 9; //main buzzer
+byte chargerKeyPin = 51; //enables charge mode
 
 
 //Debug control
@@ -35,6 +35,7 @@ const boolean DEBUG_CLK_TIME = false;
 //Operation control
 byte modusOperandi; //defines how the system should behave
 boolean controllerEnabled; //enables controller
+boolean controllerMandatory; //if the mode only functions with a controller
 boolean clockEnabled; //enables the clock
 int definedClockTime; //how long should each clock cycle take
 
@@ -45,6 +46,7 @@ unsigned int clockCycleStartTime; //stores when last clock cycle started
 boolean longExecutionTime; //holds true when loop takes longer than definedClockTime
 
 //Controller variables
+unsigned int lastErrorTime;
 byte error;
 byte type;
 
@@ -54,6 +56,13 @@ void setup()
 	pinMode(systemBuzzerPin, OUTPUT); //main buzzer
 	pinMode(chargerKeyPin, INPUT); //enables charge mode
 	Serial.begin(57600);
+	
+	//Temporary
+	delay(1000);
+	detectController();
+	clockEnabled = true;
+	controllerEnabled = true;
+	definedClockTime = 50;
 
 }
 
@@ -63,6 +72,10 @@ void loop()
 	clockCycleStartTime = millis();
 
 	checkController(); //controller validation manager
+	// Serial.print("Took: ");
+	// Serial.print(lastClockCycleTime);
+	// Serial.print(" Millis: ");
+	// Serial.println(millis());
 	
 	clockControl(); //clock manager
 }
@@ -90,16 +103,42 @@ void checkController()
 {
 	if (controllerEnabled) //if current mode uses controller
 	{
-		if ()
+		ps2x.read_gamepad(); //read controller
+		if (validController()) //if valid controller
 		{
 			
 		}
+		else
+		{
+			if (controllerMandatory) 
+			{
+				
+			}
+			else
+			{
+				
+			}
+		}
+	}
+}
+
+//Check data integrity
+boolean validController ()
+{
+	if (ps2x.Analog(PSS_LY) == 255 and ps2x.Analog(PSS_RX) == 255) or (ps2x.Analog(PSS_LY) == 0 and ps2x.Analog(PSS_RX) == 0)
+	{	
+		return false; //controller readings are all 255 or 0. Might be poorly connected or not connected at all
+	}
+	else
+	{
+		return true;
 	}
 }
 
 //Library controller detection function
 void detectController()
 {
+	// Serial.println("BEBUG: detectController()");
 	//Setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
 	error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
 	type = ps2x.readType();
