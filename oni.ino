@@ -192,7 +192,6 @@ void detectController()
 
 void debug ()
 {
-	buffer[0] = '0'; //clear debug buffer
 	if (DEBUG_CLK_TIME)
 	{
 		sprintf(buffer, "CLK: %u", lastClockCycleTime);
