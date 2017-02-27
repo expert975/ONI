@@ -30,7 +30,8 @@ byte chargerKeyPin = 51; //enables charge mode
 
 
 //Debug control
-const boolean DEBUG_CLK_TIME = false;
+char buffer[1024];
+const boolean DEBUG_CLK_TIME = true;
 
 //Operation control
 byte modusOperandi; //defines how the system should behave
@@ -79,6 +80,8 @@ void loop()
 	// Serial.print(" Millis: ");
 	// Serial.println(millis());
 	
+	debug();
+	
 	clockControl(); //clock manager
 }
 
@@ -106,7 +109,7 @@ void checkController()
 	if (controllerEnabled) //if current mode uses controller
 	{
 		ps2x.read_gamepad(); //read controller
-		if (validController()) //if valid controller
+		if (isValidController()) //if valid controller
 		{
 			firstErrorTime = 1; //mark controller as valid this cycle
 		}
@@ -130,9 +133,9 @@ void checkController()
 }
 
 //Check data integrity
-boolean validController ()
+boolean isValidController ()
 {
-	if (ps2x.Analog(PSS_LY) == 255 and ps2x.Analog(PSS_RX) == 255) or (ps2x.Analog(PSS_LY) == 0 and ps2x.Analog(PSS_RX) == 0)
+	if ((ps2x.Analog(PSS_LY) == 255 and ps2x.Analog(PSS_RX) == 255) or (ps2x.Analog(PSS_LY) == 0 and ps2x.Analog(PSS_RX) == 0))
 	{	
 		return false; //controller readings are all 255 or 0. Might be poorly connected or not connected at all
 	}
@@ -186,3 +189,15 @@ void detectController()
 			break;
 	}
 }
+
+void debug ()
+{
+	buffer[0] = '0'; //clear debug buffer
+	if (DEBUG_CLK_TIME)
+	{
+		sprintf(buffer, "CLK: %u", lastClockCycleTime);
+		Serial.println(buffer);
+	}
+	
+}
+
