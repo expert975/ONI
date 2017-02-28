@@ -74,19 +74,15 @@ void loop()
 	//Clock cycle start
 	clockCycleStartTime = millis();
 
-	checkController(); //controller validation manager
-	// Serial.print("Took: ");
-	// Serial.print(lastClockCycleTime);
-	// Serial.print(" Millis: ");
-	// Serial.println(millis());
+	controllerManager(); //controller validation manager
 	
-	debug();
+	debugManager();
 	
-	clockControl(); //clock manager
+	clockManager(); //clock manager
 }
 
 //Allows modes to operate in fixed clock
-void clockControl()
+void clockManager()
 {
 	//This next function should always be the last one in the loop sequence
 	if (clockEnabled) //if current mode uses clock
@@ -104,7 +100,7 @@ void clockControl()
 }
 
 //Checks if the controller is properly connected
-void checkController()
+void controllerManager()
 {
 	if (controllerEnabled) //if current mode uses controller
 	{
@@ -190,11 +186,11 @@ void detectController()
 	}
 }
 
-void debug ()
+void debugManager ()
 {
 	if (DEBUG_CLK_TIME)
 	{
-		sprintf(buffer, "CLK: %u", lastClockCycleTime);
+		sprintf(buffer, "CLK: %u", lastClockCycleTime); //format the output string
 		Serial.println(buffer);
 	}
 	
