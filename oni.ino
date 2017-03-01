@@ -39,7 +39,7 @@ const byte DRIVE = 			1; //normal operation mode
 const byte CALIBRATION = 	2; //engine dead zone calibration mode
 
 //Operation control
-byte modusOperandi; //defines how the system should behave (i.e. current mode)
+byte modusOperandi = -1; //defines how the system should behave (i.e. current mode)
 boolean controllerEnabled; //enables controller
 boolean controllerMandatory; //if the mode only functions with a controller
 boolean clockEnabled; //enables the clock
@@ -67,7 +67,7 @@ void setup()
 	Serial.begin(57600);
 	
 	detectController(); //initialize controller
-	setMode(WAIT); //sets modusOperandi to wait at boot
+	setMode(WAIT); //sets mode to wait at boot
 }
 
 void loop()
@@ -76,7 +76,7 @@ void loop()
 
 	controllerManager(); //controller validation manager
 	
-	modeManager(); //call the right mode function for the current modusOperandi
+	modeManager(); //call the right mode function for the current mode
 	
 	keySequenceManager(); //detects key sequences and combinations and changes between modes
 	
@@ -262,22 +262,33 @@ void keySequenceManager()
 //Sets up a new operation mode
 void setMode(byte newMode)
 {
-	switch(newMode)
+	if (newMode != modusOperandi) //if newMode is different from current
 	{
-		case WAIT:
-			controllerEnabled = true; //enable controller
-			setClock(50); //set clock to 50m
-			break;
-			
-		case DRIVE:
-			controllerEnabled = true;
-			setClock(10); //10ms clock time for maximum response
-			break;
-			
-		case CALIBRATION:
-			controllerEnabled = true;
-			setClock(50);
-			break;
+		switch(newMode)
+		{
+			case WAIT:
+				modusOperandi = WAIT;
+				controllerEnabled = true; //enable controller
+				setClock(50); //set clock to 50m
+				break;
+				
+			case DRIVE:
+				modusOperandi = DRIVE;
+				controllerEnabled = true;
+				setClock(10); //10ms clock time for maximum response
+				break;
+				
+			case CALIBRATION:
+				modusOperandi = CALIBRATION;
+				controllerEnabled = true;
+				setClock(50);
+				for (int i=500;i<1800;i+=80) //make little noise for debugging 
+					{
+						tone(systemBuzzerPin, i, 30);
+						delay(29);
+					}
+				break;
+		}
 	}
 }
 
