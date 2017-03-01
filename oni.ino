@@ -50,6 +50,7 @@ boolean longExecutionTime; //holds true when loop takes longer than definedClock
 unsigned int controllerTimeOut = 2000; //how long should be an error sequence before a controller detection
 unsigned int firstErrorTime = 1; //stores the beginning of an error sequence
 unsigned int lastErrorTime = 1; //stores the last error occurrence
+boolean validController; //stores weather the controller is valid or not
 byte error; //stores error code for controller detection
 byte type; //stores controller type
 
@@ -134,11 +135,13 @@ void controllerManager()
 boolean isValidController ()
 {
 	if ((ps2x.Analog(PSS_LY) == 255 and ps2x.Analog(PSS_RX) == 255) or (ps2x.Analog(PSS_LY) == 0 and ps2x.Analog(PSS_RX) == 0))
-	{	
+	{
+		validController = false;
 		return false; //controller readings are all 255 or 0. Might be poorly connected or not connected at all
 	}
 	else
 	{
+		validController = true;
 		return true;
 	}
 }
