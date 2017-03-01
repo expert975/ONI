@@ -33,8 +33,13 @@ byte chargerKeyPin = 51; //enables charge mode
 char buffer[1024]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial
 
+//Operational modes
+const byte WAIT	= 			0; //default mode at startup
+const byte DRIVE = 			1; //normal operation mode
+const byte CALIBRATION = 	2; //engine dead zone calibration mode
+
 //Operation control
-byte modusOperandi; //defines how the system should behave
+byte modusOperandi; //defines how the system should behave (i.e. current mode)
 boolean controllerEnabled; //enables controller
 boolean controllerMandatory; //if the mode only functions with a controller
 boolean clockEnabled; //enables the clock
@@ -58,30 +63,63 @@ byte type; //stores controller type
 void setup()
 {
 	pinMode(systemBuzzerPin, OUTPUT); //main buzzer
-	pinMode(chargerKeyPin, INPUT); //enables charge mode
+	pinMode(chargerKeyPin, INPUT); //key enables charge mode
 	Serial.begin(57600);
 	
-	//Temporary
-	delay(1000);
-	detectController();
-	clockEnabled = true;
-	controllerEnabled = true;
-	definedClockTime = 50;
-
+	detectController(); //initialize controller
+	setMode(WAIT); //sets modusOperandi to wait at boot
 }
 
 void loop()
 {
-	//Clock cycle start
-	clockCycleStartTime = millis();
+	clockCycleStartTime = millis(); //clock cycle start
 
 	controllerManager(); //controller validation manager
 	
-	keySequenceManager(); //detects key sequences and combinations
+	modeManager(); //call the right mode function for the current modusOperandi
+	
+	keySequenceManager(); //detects key sequences and combinations and changes between modes
 	
 	debugManager(); //prints debug information
 	
 	clockManager(); //clock manager
+}
+
+//Calls the current mode manager
+void modeManager()
+{
+	switch (modusOperandi) //call the right manager depending on current operating mode
+	{
+		case WAIT:
+			waitMode();
+			break;
+			
+		case DRIVE:
+			driveMode();
+			break;
+			
+		case CALIBRATION:
+			calibrationMode();
+			break;
+	}
+}
+
+//Wait mode operation
+void waitMode() //what happens in wait mode?
+{
+	
+}
+
+//Drive mode operation
+void driveMode() //what happens in drive mode?
+{
+	
+}
+
+//Calibration mode operation
+void calibrationMode() //what happens in calibration mode?
+{
+	
 }
 
 //Allows modes to operate in fixed clock
@@ -100,6 +138,21 @@ void clockManager()
 			delay(definedClockTime - lastClockCycleTime); //...we still got some time to waste
 		}
 	}	
+}
+
+//Sets clock time
+void setClock(int clockTime)
+{
+	if (clockTime == 0)
+	{
+		clockEnabled = false;
+		definedClockTime = 0;
+	}
+	else
+	{
+		clockEnabled = true;
+		definedClockTime = clockTime;
+	}
 }
 
 //Checks if the controller is properly connected
@@ -194,7 +247,38 @@ void detectController()
 //Detects key sequences and combinations
 void keySequenceManager()
 {
-	
+	if (validController) //if controller i present
+	{
+		if (ps2x.ButtonPressed(PSB_R3)) //if R3 was just pressed
+		{
+			if (ps2x.Button(PSB_PAD_RIGHT) and ps2x.Button(PSB_SELECT)) //if right and select were pressed
+			{
+				setMode(CALIBRATION); //initialize calibration mode
+			}
+		}
+	}
+}
+
+//Sets up a new operation mode
+void setMode(byte newMode)
+{
+	switch(newMode)
+	{
+		case WAIT:
+			controllerEnabled = true; //enable controller
+			setClock(50); //set clock to 50m
+			break;
+			
+		case DRIVE:
+			controllerEnabled = true;
+			setClock(10); //10ms clock time for maximum response
+			break;
+			
+		case CALIBRATION:
+			controllerEnabled = true;
+			setClock(50);
+			break;
+	}
 }
 
 void debugManager ()
