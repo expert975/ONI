@@ -30,8 +30,8 @@ byte chargerKeyPin = 51; //enables charge mode
 
 
 //Debug control
-char buffer[1024];
-const boolean DEBUG_CLK_TIME = true;
+char buffer[1024]; //this is the string that holds the debug output
+const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial
 
 //Operation control
 byte modusOperandi; //defines how the system should behave
@@ -47,7 +47,7 @@ unsigned int clockCycleStartTime; //stores when last clock cycle started
 boolean longExecutionTime; //holds true when loop takes longer than definedClockTime
 
 //Controller variables
-unsigned int controllerTimeOut = 1000; //how long should be an error sequence before a controller detection
+unsigned int controllerTimeOut = 2000; //how long should be an error sequence before a controller detection
 unsigned int firstErrorTime = 1; //stores the beginning of an error sequence
 unsigned int lastErrorTime = 1; //stores the last error occurrence
 byte error; //stores error code for controller detection
@@ -76,7 +76,9 @@ void loop()
 
 	controllerManager(); //controller validation manager
 	
-	debugManager();
+	keySequenceManager(); //detects key sequences and combinations
+	
+	debugManager(); //prints debug information
 	
 	clockManager(); //clock manager
 }
@@ -114,14 +116,14 @@ void controllerManager()
 			lastErrorTime = millis(); //store last error occurrence
 			if (firstErrorTime == 1) //if controller was valid on last cycle
 			{
-				firstErrorTime = millis(); //store first error occurrence
+				firstErrorTime = lastErrorTime; //store first error occurrence
 			}
 			else //if controller was not valid last cycle
 			{
-				if (lastErrorTime - firstErrorTime > controllerTimeOut) //if invalid readings for more than controllerTimeOut
+				if ((lastErrorTime - firstErrorTime) > controllerTimeOut) //if invalid readings for more than controllerTimeOut
 				{
 					detectController(); //controller must be unconnected, detectController()
-					firstErrorTime == 1; //wait one more controllerTimeOut before next check
+					firstErrorTime = 1; //wait one more controllerTimeOut before next check
 				}
 			}
 		}
@@ -184,6 +186,12 @@ void detectController()
 			Serial.println("Wireless Sony DualShock Controller.");
 			break;
 	}
+}
+
+//Detects key sequences and combinations
+void keySequenceManager()
+{
+	
 }
 
 void debugManager ()
