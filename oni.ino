@@ -34,12 +34,12 @@ char buffer[1024]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial
 
 //Operational modes
-const byte WAIT	= 			0; //default mode at startup
-const byte DRIVE = 			1; //normal operation mode
-const byte CALIBRATION = 	2; //engine dead zone calibration mode
+const byte WAIT	= 1; //default mode at startup
+const byte DRIVE = 2; //normal operation mode
+const byte CALIBRATION = 3; //engine dead zone calibration mode
 
 //Operation control
-byte modusOperandi = -1; //defines how the system should behave (i.e. current mode)
+byte modusOperandi; //defines how the system should behave (i.e. current mode)
 boolean controllerEnabled; //enables controller
 boolean controllerMandatory; //if the mode only functions with a controller
 boolean clockEnabled; //enables the clock
@@ -262,7 +262,7 @@ void keySequenceManager()
 //Sets up a new operation mode
 void setMode(byte newMode)
 {
-	if (newMode != modusOperandi) //if newMode is different from current
+	if (newMode != modusOperandi) //if newMode is different from current mode
 	{
 		switch(newMode)
 		{
