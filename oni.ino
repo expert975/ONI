@@ -30,7 +30,7 @@ byte chargerKeyPin = 51; //enables charge mode
 
 
 //Debug control
-char buffer[1024]; //this is the string that holds the debug output
+char buffer[256]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial
 
 //Operational modes
