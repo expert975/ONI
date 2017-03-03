@@ -30,7 +30,7 @@ byte chargerKeyPin = 51; //enables charge mode
 
 
 //Debug control
-char buffer[256]; //this is the string that holds the debug output
+char buffer[128]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial
 
 //Operational modes
@@ -52,7 +52,7 @@ unsigned int clockCycleStartTime; //stores when last clock cycle started
 boolean longExecutionTime; //holds true when loop takes longer than definedClockTime
 
 //Controller variables
-unsigned int controllerTimeOut = 2000; //how long should be an error sequence before a controller detection
+const unsigned int CONTROLLER_TIMEOUT = 2000; //how long should be an error sequence before a controller detection
 unsigned int firstErrorTime = 1; //stores the beginning of an error sequence
 unsigned int lastErrorTime = 1; //stores the last error occurrence
 boolean validController; //stores weather the controller is valid or not
@@ -174,10 +174,10 @@ void controllerManager()
 			}
 			else //if controller was not valid last cycle
 			{
-				if ((lastErrorTime - firstErrorTime) > controllerTimeOut) //if invalid readings for more than controllerTimeOut
+				if ((lastErrorTime - firstErrorTime) > CONTROLLER_TIMEOUT) //if invalid readings for more than the timeout
 				{
 					detectController(); //controller must be unconnected, detectController()
-					firstErrorTime = 1; //wait one more controllerTimeOut before next check
+					firstErrorTime = 1; //wait one more timeout before next check
 				}
 			}
 		}
