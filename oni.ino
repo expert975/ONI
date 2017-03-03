@@ -42,6 +42,7 @@ const byte chargerKeyPin = 51; //enables charge mode
 //Debug control
 char buffer[128]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial: lastClockCycleTime
+const boolean DEBUG_MODE = true; //weather should the current mode be written to the serial: mode
 const boolean  DEBUG_CONTROLLER = true; //weather should controller information be written to serial: validController LX RY
 
 //Operational modes
@@ -310,6 +311,10 @@ void debugManager ()
 	{
 		// sprintf(buffer, "CLK: %3u ", lastClockCycleTime); //format the output string
 		sprintf(buffer, "%3u ", lastClockCycleTime); //format the output string
+	}
+	if (DEBUG_MODE)
+	{
+		sprintf(buffer, "%s %u ", buffer, modusOperandi);
 	}
 	if (DEBUG_CONTROLLER)
 	{
