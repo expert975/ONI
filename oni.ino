@@ -267,6 +267,10 @@ void keySequenceManager()
 			{
 				setMode(CALIBRATION); //initialize calibration mode
 			}
+			else //if right and select were not pressed
+			{
+				setMode(DRIVE); //initialize drive mode
+			}
 		}
 	}
 }
@@ -287,7 +291,10 @@ void setMode(byte newMode)
 			case DRIVE:
 				modusOperandi = DRIVE;
 				controllerEnabled = true;
-				setClock(10); //10ms clock time for maximum response
+				setClock(50); //50ms clock time. Setting to 10 ms seemed to cause problems in controller connection
+				tone(systemBuzzerPin, 2800, 50);
+				delay(100);
+				tone(systemBuzzerPin, 2800, 250);
 				break;
 				
 			case CALIBRATION:
@@ -309,7 +316,6 @@ void debugManager ()
 	buffer[0] = '\0'; //clear the buffer by setting the first char as null
 	if (DEBUG_CLK_TIME)
 	{
-		// sprintf(buffer, "CLK: %3u ", lastClockCycleTime); //format the output string
 		sprintf(buffer, "%3u ", lastClockCycleTime); //format the output string
 	}
 	if (DEBUG_MODE)
@@ -318,7 +324,6 @@ void debugManager ()
 	}
 	if (DEBUG_CONTROLLER)
 	{
-		// sprintf(buffer, "%sLX: %03u RY: %03u (%i)", buffer, ps2x.Analog(PSS_LX), ps2x.Analog(PSS_RY), validController); //append to the buffer
 		sprintf(buffer, "%s %i %03u %03u", buffer, validController, ps2x.Analog(PSS_LX), ps2x.Analog(PSS_RY)); //append to the buffer
 	}
 	Serial.println(buffer); //print the debug string
