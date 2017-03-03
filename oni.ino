@@ -31,7 +31,8 @@ const byte chargerKeyPin = 51; //enables charge mode
 
 //Debug control
 char buffer[128]; //this is the string that holds the debug output
-const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial
+const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial: lastClockCycleTime
+const boolean  DEBUG_CONTROLLER = true; //weather should controller information be written to serial: validController LX RY
 
 //Operational modes
 const byte WAIT	= 1; //default mode at startup
@@ -294,11 +295,17 @@ void setMode(byte newMode)
 
 void debugManager ()
 {
+	buffer[0] = '\0'; //clear the buffer by setting the first char as null
 	if (DEBUG_CLK_TIME)
 	{
-		sprintf(buffer, "CLK: %u", lastClockCycleTime); //format the output string
-		Serial.println(buffer);
+		// sprintf(buffer, "CLK: %3u ", lastClockCycleTime); //format the output string
+		sprintf(buffer, "%3u ", lastClockCycleTime); //format the output string
 	}
-	
+	if (DEBUG_CONTROLLER)
+	{
+		// sprintf(buffer, "%sLX: %03u RY: %03u (%i)", buffer, ps2x.Analog(PSS_LX), ps2x.Analog(PSS_RY), validController); //append to the buffer
+		sprintf(buffer, "%s %i %03u %03u", buffer, validController, ps2x.Analog(PSS_LX), ps2x.Analog(PSS_RY)); //append to the buffer
+	}
+	Serial.println(buffer); //print the debug string
 }
 
