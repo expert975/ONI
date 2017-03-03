@@ -25,8 +25,8 @@ PS2X ps2x; //starts a 'PS2 controller' object
 L293D engL(11,2,3); //left engine
 L293D engR(12,7,8); //right engine
 
-byte systemBuzzerPin = 9; //main buzzer
-byte chargerKeyPin = 51; //enables charge mode
+const byte systemBuzzerPin = 9; //main buzzer
+const byte chargerKeyPin = 51; //enables charge mode
 
 
 //Debug control
