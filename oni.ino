@@ -208,38 +208,38 @@ void detectController()
 	type = ps2x.readType();
 	
 	//Serial prints for controller information
-	Serial.println("Detecting controller...");
+	Serial.println(F("Detecting controller..."));
 	switch(error)
 	{
 		case 0:
-			Serial.println("Found Controller, configuration successful!");
+			Serial.println(F("Found Controller, configuration successful!"));
 			break;
 		case 1:
-			Serial.println("No controller found.");
+			Serial.println(F("No controller found."));
 			type = 0; //when error is 1, sometimes type doesn't get updated
 			break;
 		case 2:
-			Serial.println("Controller found but not accepting commands.");
+			Serial.println(F("Controller found but not accepting commands."));
 			break;
 		case 3:
-			Serial.println("Controller refusing to enter Pressures mode, may not support it.");
+			Serial.println(F("Controller refusing to enter Pressures mode, may not support it."));
 			break;
 	}
-	Serial.print("Controller type: ");
+	Serial.print(F("Controller type: "));
 	switch(type)
 	{
 		case 0:
-			Serial.println("Unknown Controller.");
+			Serial.println(F("Unknown Controller."));
 			break;
 		case 1:
-			Serial.println("DualShock Controller.");
+			Serial.println(F("DualShock Controller."));
 			break;
 		case 2:
-			Serial.println("GuitarHero Controller.");
-			Serial.println("This controller is not supported!");
+			Serial.println(F("GuitarHero Controller."));
+			Serial.println(F("This controller is not supported!"));
 			break;
 		case 3:
-			Serial.println("Wireless Sony DualShock Controller.");
+			Serial.println(F("Wireless Sony DualShock Controller."));
 			break;
 	}
 }
