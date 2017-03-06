@@ -1,3 +1,5 @@
 *.tmp
+.*
+#*
 ps2ex.c
 rgb_led.c
