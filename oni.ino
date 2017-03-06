@@ -18,6 +18,7 @@
 
 #include <PS2X_lib.h> //for v1.6 **Modified**
 #include <L293D.h> // **Modified**
+#include <EEPROM.h>
 
 //PS2 controller pins 
 #define PS2_DAT 14
@@ -70,6 +71,9 @@ unsigned int lastErrorTime = 1; //stores the last error occurrence
 boolean validController; //stores weather the controller is valid or not
 byte error; //stores error code for controller detection
 byte type; //stores controller type
+
+//Engine math variables
+byte engineDeadzoneOffset = EEPROM.read(0); //read calibration data from persistent storage
 
 
 void setup()
