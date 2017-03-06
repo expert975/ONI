@@ -18,7 +18,7 @@
 
 #include <PS2X_lib.h> //for v1.6 **Modified**
 #include <L293D.h> // **Modified**
-#include <EEPROM.h>
+#include <EEPROM.h> //allows reading and writing from EEPROM
 
 //PS2 controller pins 
 #define PS2_DAT 14
@@ -37,8 +37,6 @@ L293D engL(11,2,3); //left engine
 L293D engR(12,7,8); //right engine
 
 const byte systemBuzzerPin = 9; //main buzzer
-const byte chargerKeyPin = 51; //enables charge mode
-
 
 //Debug control
 char buffer[128]; //this is the string that holds the debug output
@@ -79,7 +77,6 @@ byte engineDeadzoneOffset = EEPROM.read(0); //read calibration data from persist
 void setup()
 {
 	pinMode(systemBuzzerPin, OUTPUT); //main buzzer
-	pinMode(chargerKeyPin, INPUT); //key enables charge mode
 	Serial.begin(57600);
 	
 	detectController(); //initialize controller
