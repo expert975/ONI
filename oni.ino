@@ -123,7 +123,14 @@ void waitMode() //what happens in wait mode?
 //Drive mode operation
 void driveMode() //what happens in drive mode?
 {
-	
+	if (validController)
+	{
+		
+	}
+	else
+	{
+		
+	}
 }
 
 //Calibration mode operation
