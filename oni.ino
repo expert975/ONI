@@ -26,9 +26,6 @@
 #define PS2_SEL 16 //yellow
 #define PS2_CLK 17
 
-#define pressures 	true  //button pressures
-#define rumble 		false  //controller vibration
-
 // Hardware setup
 PS2X ps2x; //starts a 'PS2 controller' object
 
@@ -217,7 +214,7 @@ void detectController()
 {
 	// Serial.println("BEBUG: detectController()");
 	//Setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
-	error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
+	error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, false, false);
 	type = ps2x.readType();
 	
 	//Serial prints for controller information
