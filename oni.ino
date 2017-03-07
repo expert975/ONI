@@ -69,6 +69,14 @@ byte type; //stores controller type
 
 //Engine math variables
 byte engineDeadzoneOffset = EEPROM.read(0); //read calibration data from persistent storage
+int accel;
+int curve;
+double curvatureSpeed;
+float pAccel;
+float pCurve;
+int speedL = 0; //speed on left engine
+int speedR = 0; //speed on right engine
+const float turnRate = 0.4; //this controls how sharp turning is, changes with velocity (0~1)
 
 
 void setup()
@@ -316,6 +324,7 @@ void setMode(byte newMode)
 	}
 }
 
+//Shows debug information relating the most relevant system parameters
 void debugManager ()
 {
 	buffer[0] = '\0'; //clear the buffer by setting the first char as null
@@ -334,3 +343,133 @@ void debugManager ()
 	Serial.println(buffer); //print the debug string
 }
 
+void moveEngines()
+{
+	curve = mapValues(ps2x.Analog(PSS_LX), false); //curves -> horizontal axis, left stick
+	accel = mapValues(ps2x.Analog(PSS_RY), true); //acceleration -> vertical axis, right stick
+	
+	//Set speed according to accel reading and curvatureSpeed to 0 in case of no curves
+	speedL = accel; 
+	speedR = accel;
+	
+	curvatureSpeed = 0;
+	int curvatureToSpeed = 0;
+	int curvatureToSpeedReversed = 0;
+	pAccel = float(accel)/255; //divide by maximum possible value to get a percentage number
+	pCurve = float(curve)/255; //1 = 100%, 0.5 = 50%
+
+	//Calculate curvatureSpeed only if there is accel and curve
+	if (curve != 0 and accel != 0)
+		curvatureSpeed = float(map(int(((1 - pow(fabsf(pAccel),fabsf(pCurve))) + float(map(turnRate*fabsf(pCurve)*100 - turnRate*fabsf(pAccel)*50,-turnRate*50,turnRate*100,0,turnRate*100))/100)*100),0,100 + turnRate*100,0,100))/100; //really complicated stuff. There's a picture attached to the source code explaining this.
+		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse. 
+		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse. 
+	
+	if (calibrationMode)
+	{
+		if (ps2x.ButtonPressed(PSB_PAD_UP))
+		{
+			speedR++;
+			speedL++;
+		}
+		else if (ps2x.ButtonPressed(PSB_PAD_DOWN))
+		{
+			speedR--;
+			speedL--;
+		}
+		else if (ps2x.ButtonPressed(PSB_L1))
+		{
+			speedR+= 10;
+			speedL+= 10;
+		}
+		else if (ps2x.ButtonPressed(PSB_L2))
+		{
+			speedR-= 10;
+			speedL-= 10;
+		}
+		if (speedR > 255)
+			speedR = 255;
+		if (speedL > 255)
+			speedL = 255;
+	}
+	
+	//Setting speeds
+	else if (accel > 0) //going forward
+	{
+		//For turning
+		if (curve > 0) //going right
+		{
+			speedR = curvatureToSpeed;
+		}
+		else if (curve < 0) //going left
+		{
+			speedL = curvatureToSpeed;
+		}
+	}
+	else if (accel < 0) //going reverse
+	{
+		//For turning
+		if (curve > 0) //going right
+		{
+			speedR = curvatureToSpeedReversed;
+		}
+		else if (curve < 0) //going left
+		{
+			speedL = curvatureToSpeedReversed;
+		}
+	}
+	
+	//Actually move or just do math?
+	if (calibrationMode)
+	{
+		if (ps2x.Button(PSB_CROSS))
+		{
+			engR.set(speedR);
+			engL.set(speedL);
+		}
+		else
+		{
+			engR.set(0);
+			engL.set(0);
+		}
+	}
+	else
+	{
+		if (true) //(MOVE_ENGINE)
+		{
+			engR.set(speedR);
+			engL.set(speedL);
+		}
+	}
+	
+	digitalWrite(systemBuzzerPin, ps2x.Button(PSB_R3)); //control buzzer based on R3 state
+}
+
+int mapValues(byte value, boolean invert)
+{
+	//This function should get the values from the analog axis and convert to PWM values for engine power control
+	if (value < 128)
+	{
+		if(invert == false)
+			return int(map(value,0,128,-255, 0));
+		else
+			return int(map(value,0,128,-255, 0))*-1;
+	}
+	else if (value > 128)
+	{
+		if (invert == false)
+			return int(map(value,128,255, 0,255));
+		else
+			return int(map(value,128,255, 0,255))*-1;
+	}
+	else
+		return 0;
+}
+
+/*
+//map() function:
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+*/
