@@ -353,46 +353,21 @@ void moveEngines()
 	speedR = accel;
 	
 	curvatureSpeed = 0;
-	int curvatureToSpeed = 0;
-	int curvatureToSpeedReversed = 0;
+	int curvatureToSpeed = 0; //could use a byte?
+	int curvatureToSpeedReversed = 0; //could use a byte?
 	pAccel = float(accel)/255; //divide by maximum possible value to get a percentage number
 	pCurve = float(curve)/255; //1 = 100%, 0.5 = 50%
+	 //might be able to optimize speed by not using this percentage in the engine math
 
 	//Calculate curvatureSpeed only if there is accel and curve
 	if (curve != 0 and accel != 0)
 		curvatureSpeed = float(map(int(((1 - pow(fabsf(pAccel),fabsf(pCurve))) + float(map(turnRate*fabsf(pCurve)*100 - turnRate*fabsf(pAccel)*50,-turnRate*50,turnRate*100,0,turnRate*100))/100)*100),0,100 + turnRate*100,0,100))/100; //really complicated stuff. There's a picture attached to the source code explaining this.
 		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse. 
+		//probably should not convert into percentages then out
 		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse. 
 	
-	if (calibrationMode)
-	{
-		if (ps2x.ButtonPressed(PSB_PAD_UP))
-		{
-			speedR++;
-			speedL++;
-		}
-		else if (ps2x.ButtonPressed(PSB_PAD_DOWN))
-		{
-			speedR--;
-			speedL--;
-		}
-		else if (ps2x.ButtonPressed(PSB_L1))
-		{
-			speedR+= 10;
-			speedL+= 10;
-		}
-		else if (ps2x.ButtonPressed(PSB_L2))
-		{
-			speedR-= 10;
-			speedL-= 10;
-		}
-		if (speedR > 255)
-			speedR = 255;
-		if (speedL > 255)
-			speedL = 255;
-	}
-	
 	//Setting speeds
+	//For accel > 0 and accel < 0 speedR and speedL get set to the same values, just reversed. It might be possible to remove these statements by incorporating these cases to the main formula
 	else if (accel > 0) //going forward
 	{
 		//For turning
@@ -417,30 +392,8 @@ void moveEngines()
 			speedL = curvatureToSpeedReversed;
 		}
 	}
-	
-	//Actually move or just do math?
-	if (calibrationMode)
-	{
-		if (ps2x.Button(PSB_CROSS))
-		{
-			engR.set(speedR);
-			engL.set(speedL);
-		}
-		else
-		{
-			engR.set(0);
-			engL.set(0);
-		}
-	}
-	else
-	{
-		if (true) //(MOVE_ENGINE)
-		{
-			engR.set(speedR);
-			engL.set(speedL);
-		}
-	}
-	
+	engR.set(speedR);
+	engL.set(speedL);
 	digitalWrite(systemBuzzerPin, ps2x.Button(PSB_R3)); //control buzzer based on R3 state
 }
 
