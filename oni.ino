@@ -447,19 +447,19 @@ void moveEngines()
 int mapValues(byte value, boolean invert)
 {
 	//This function should get the values from the analog axis and convert to PWM values for engine power control
-	if (value < 128)
+	if (value < 128) //it may be possible to replace this conditional statement for more abrangent mapping function. It might be possible to use simpler math for this mapping by expanding the map function.
 	{
 		if(invert == false)
 			return int(map(value,0,128,-255, 0));
 		else
-			return int(map(value,0,128,-255, 0))*-1;
+			return int(map(value,0,128,-255, 0))*-1; //swap 0 and 128 or -255 and 0 should replace the *-1 operation, saving time. Can a byte be used instead of an integer?
 	}
 	else if (value > 128)
 	{
 		if (invert == false)
 			return int(map(value,128,255, 0,255));
 		else
-			return int(map(value,128,255, 0,255))*-1;
+			return int(map(value,128,255, 0,255))*-1; //same as above
 	}
 	else
 		return 0;
