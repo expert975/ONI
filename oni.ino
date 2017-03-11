@@ -217,11 +217,20 @@ boolean isValidController ()
 		validController = false;
 		return false; //controller readings are all 255 or 0. Might be poorly connected or not connected at all
 	}
+	else if (ps2x.Analog(PSS_LY) == 115 and ps2x.Analog(PSS_RX) == 115)
+	{
+		tone(systemBuzzerPin, 5400, 1000); //sound warning buzzer
+		validController = false;
+		return false; //controller readings are all 115. This usually happens when high logic voltage level falls down. Low battery
+	}
 	else
 	{
 		validController = true;
 		return true;
 	}
+	//corner case: sometimes when high logic voltage goes really low, all buttons can go to 1 when analogs aren't 0 or 255
+	//could  be detected by checking one or more buttons (e.g. PSB_START). When such happens, the system might sometimes
+	// switch between forward and backwards each cycle or behave strangely, similarly to when analogs are on 115
 }
 
 //Library controller detection function
