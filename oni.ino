@@ -69,6 +69,7 @@ byte error; //stores error code for controller detection
 byte type; //stores controller type
 
 //Engine math variables
+const float TURN_RATE = 0.4; //this controls how sharp turning is, changes with velocity (0~1)
 byte engineDeadzoneOffset = EEPROM.read(0); //read calibration data from persistent storage
 int accel;
 int curve;
@@ -77,7 +78,6 @@ float pAccel;
 float pCurve;
 int speedL = 0; //speed on left engine
 int speedR = 0; //speed on right engine
-const float turnRate = 0.4; //this controls how sharp turning is, changes with velocity (0~1)
 
 
 void setup()
@@ -376,7 +376,7 @@ void engineManager()
 	//Calculate curvatureSpeed only if there is accel and curve
 	if (curve != 0 and accel != 0)
 	{
-		curvatureSpeed = float(map(int(((1 - pow(fabsf(pAccel),fabsf(pCurve))) + float(map(turnRate*fabsf(pCurve)*100 - turnRate*fabsf(pAccel)*50,-turnRate*50,turnRate*100,0,turnRate*100))/100)*100),0,100 + turnRate*100,0,100))/100; //really complicated stuff. There's a picture attached to the source code explaining this.
+		curvatureSpeed = float(map(int(((1 - pow(fabsf(pAccel),fabsf(pCurve))) + float(map(TURN_RATE*fabsf(pCurve)*100 - TURN_RATE*fabsf(pAccel)*50,-TURN_RATE*50,TURN_RATE*100,0,TURN_RATE*100))/100)*100),0,100 + TURN_RATE*100,0,100))/100; //really complicated stuff. There's a picture attached to the source code explaining this.
 		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse. 
 		//probably should not convert into percentages then out
 		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse. 
