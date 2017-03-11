@@ -40,6 +40,7 @@ char buffer[128]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial: lastClockCycleTime
 const boolean DEBUG_MODE = true; //weather should the current mode be written to the serial: mode
 const boolean  DEBUG_CONTROLLER = true; //weather should controller information be written to serial: validController LX RY
+const boolean DEBUG_ENGINE_MATH = true; //weather should engine math be displayed to the console
 
 //Operational modes
 const byte WAIT	= 1; //default mode at startup
@@ -347,7 +348,11 @@ void debugManager ()
 	}
 	if (DEBUG_CONTROLLER)
 	{
-		sprintf(buffer, "%s %i %03u %03u", buffer, validController, ps2x.Analog(PSS_LX), ps2x.Analog(PSS_RY)); //append to the buffer
+		sprintf(buffer, "%s %i %03u %03u ", buffer, validController, ps2x.Analog(PSS_LX), ps2x.Analog(PSS_RY)); //append to the buffer
+	}
+	if (DEBUG_ENGINE_MATH)
+	{
+		sprintf(buffer, "%s %+04i %+04i %+04i %+04i %+04i ", buffer, accel, curve, curvatureSpeed, speedL, speedR);
 	}
 	Serial.println(buffer); //print the debug string
 }
@@ -403,8 +408,8 @@ void engineManager()
 			speedL = curvatureToSpeedReversed;
 		}
 	}
-	engR.set(speedR);
-	engL.set(speedL);
+	// engR.set(speedR);
+	// engL.set(speedL);
 	digitalWrite(systemBuzzerPin, ps2x.Button(PSB_R3)); //control buzzer based on R3 state
 }
 
