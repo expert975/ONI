@@ -343,7 +343,7 @@ void debugManager ()
 	Serial.println(buffer); //print the debug string
 }
 
-void moveEngines()
+void engineManager()
 {
 	curve = mapValues(ps2x.Analog(PSS_LX), false); //curves -> horizontal axis, left stick
 	accel = mapValues(ps2x.Analog(PSS_RY), true); //acceleration -> vertical axis, right stick
