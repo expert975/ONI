@@ -133,7 +133,7 @@ void driveMode() //what happens in drive mode?
 {
 	if (validController)
 	{
-		
+		engineManager();
 	}
 	else
 	{
