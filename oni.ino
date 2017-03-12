@@ -375,12 +375,10 @@ void engineManager()
 
 	//Calculate curvatureSpeed only if there is accel and curve
 	if (curve != 0 and accel != 0)
-	{
 		curvatureSpeed = float(map(int(((1 - pow(fabsf(pAccel),fabsf(pCurve))) + float(map(TURN_RATE*fabsf(pCurve)*100 - TURN_RATE*fabsf(pAccel)*50,-TURN_RATE*50,TURN_RATE*100,0,TURN_RATE*100))/100)*100),0,100 + TURN_RATE*100,0,100))/100; //really complicated stuff. There's a picture attached to the source code explaining this.
 		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse. 
 		//probably should not convert into percentages then out
 		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse. 
-	}
 	
 	//Setting speeds
 	//For accel > 0 and accel < 0 speedR and speedL get set to the same values, just reversed. It might be possible to remove these statements by incorporating these cases to the main formula
