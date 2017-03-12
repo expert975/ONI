@@ -382,7 +382,7 @@ void engineManager()
 	
 	//Setting speeds
 	//For accel > 0 and accel < 0 speedR and speedL get set to the same values, just reversed. It might be possible to remove these statements by incorporating these cases to the main formula
-	else if (accel > 0) //going forward
+	if (accel > 0) //going forward
 	{
 		//For turning
 		if (curve > 0) //going right
