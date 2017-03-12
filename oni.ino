@@ -70,6 +70,8 @@ byte type; //stores controller type
 
 //Engine math variables
 const float TURN_RATE = 0.4; //this controls how sharp turning is, changes with velocity (0~1)
+const boolean INVERT_LEFT_STICK = false; //sets controller left stick inversion
+const boolean INVERT_RIGHT_STICK = true; //sets controller right stick inversion
 byte engineDeadzoneOffset = EEPROM.read(0); //read calibration data from persistent storage
 int accel;
 int curve;
@@ -359,8 +361,8 @@ void debugManager ()
 
 void engineManager()
 {
-	curve = mapValues(ps2x.Analog(PSS_LX), false); //curves -> horizontal axis, left stick
-	accel = mapValues(ps2x.Analog(PSS_RY), true); //acceleration -> vertical axis, right stick
+	curve = mapValues(ps2x.Analog(PSS_LX), INVERT_LEFT_STICK); //curves -> horizontal axis, left stick
+	accel = mapValues(ps2x.Analog(PSS_RY), INVERT_RIGHT_STICK); //acceleration -> vertical axis, right stick
 	
 	//Set speed according to accel reading and curvatureSpeed to 0 in case of no curves
 	speedL = accel; 
@@ -414,22 +416,21 @@ void engineManager()
 int mapValues(byte value, boolean invert)
 {
 	//This function should get the values from the analog axis and convert to PWM values for engine power control
-	if (value < 128) //it may be possible to replace this conditional statement for more abrangent mapping function. It might be possible to use simpler math for this mapping by expanding the map function.
+	if (value == 128) //if analogs are in the middle position
 	{
-		if(invert == false)
-			return int(map(value,0,128,-255, 0));
-		else
-			return int(map(value,0,128,-255, 0))*-1; //swap 0 and 128 or -255 and 0 should replace the *-1 operation, saving time. Can a byte be used instead of an integer?
-	}
-	else if (value > 128)
-	{
-		if (invert == false)
-			return int(map(value,128,255, 0,255));
-		else
-			return int(map(value,128,255, 0,255))*-1; //same as above
+		return 0; //no movement
 	}
 	else
-		return 0;
+	{
+		if (invert)
+		{
+			return int(-value*2 + 128*2 - 1); //maps value to range from 0~255 to 255~(-255), inverted
+		}
+		else
+		{
+			return int(value*2 - 128*2 + 1); //maps value to range from 0~255 to -255~255
+		}
+	}
 }
 
 /*
