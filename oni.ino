@@ -352,7 +352,7 @@ void debugManager ()
 	}
 	if (DEBUG_ENGINE_MATH)
 	{
-		sprintf(buffer, "%s %+04i %+04i %+04i %+04i %+04i ", buffer, accel, curve, curvatureSpeed, speedL, speedR);
+		sprintf(buffer, "%s %+04i %+04i %+04i %+04i %+04i ", buffer, accel, curve, int(curvatureSpeed*100), speedL, speedR);
 	}
 	Serial.println(buffer); //print the debug string
 }
