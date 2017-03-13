@@ -39,7 +39,8 @@ const byte systemBuzzerPin = 9; //main buzzer
 char buffer[128]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial: lastClockCycleTime
 const boolean DEBUG_MODE = true; //weather should the current mode be written to the serial: mode
-const boolean  DEBUG_CONTROLLER = true; //weather should controller information be written to serial: validController LX RY
+const boolean DEBUG_CONTROLLER = true; //weather should controller information be written to serial: validController LX RY
+const boolean DEGUB_CONTRLLER_TYPE = false; //weather should controller type be displayed on the console at a new reconnection
 const boolean DEBUG_ENGINE_MATH = true; //weather should engine math be displayed to the console
 
 //Operational modes
@@ -52,7 +53,7 @@ byte modusOperandi; //defines how the system should behave (i.e. current mode)
 boolean controllerEnabled; //enables controller
 boolean controllerMandatory; //if the mode only functions with a controller
 boolean clockEnabled; //enables the clock
-int definedClockTime; //how long should each clock cycle take
+unsigned int definedClockTime; //how long should each clock cycle take
 
 
 //Clock variables
@@ -239,45 +240,45 @@ boolean isValidController ()
 //Library controller detection function
 void detectController()
 {
-	// Serial.println("BEBUG: detectController()");
 	//Setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
 	error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, false, false);
 	type = ps2x.readType();
 	
 	//Serial prints for controller information
-	Serial.println(F("Detecting controller..."));
-	switch(error)
+	if (DEGUB_CONTRLLER_TYPE)
 	{
-		case 0:
-			Serial.println(F("Found Controller, configuration successful!"));
-			break;
-		case 1:
-			Serial.println(F("No controller found."));
-			type = 0; //when error is 1, sometimes type doesn't get updated
-			break;
-		case 2:
-			Serial.println(F("Controller found but not accepting commands."));
-			break;
-		case 3:
-			Serial.println(F("Controller refusing to enter Pressures mode, may not support it."));
-			break;
-	}
-	Serial.print(F("Controller type: "));
-	switch(type)
-	{
-		case 0:
-			Serial.println(F("Unknown Controller."));
-			break;
-		case 1:
-			Serial.println(F("DualShock Controller."));
-			break;
-		case 2:
-			Serial.println(F("GuitarHero Controller."));
-			Serial.println(F("This controller is not supported!"));
-			break;
-		case 3:
-			Serial.println(F("Wireless Sony DualShock Controller."));
-			break;
+		switch(error) //prints out controller state
+		{
+			case 0:
+				Serial.println(F("Found Controller, configuration successful!"));
+				break;
+			case 1:
+				Serial.println(F("No controller found."));
+				type = 0; //when error is 1, sometimes type doesn't get updated
+				break;
+			case 2:
+				Serial.println(F("Controller found but not accepting commands."));
+				break;
+			case 3:
+				Serial.println(F("Controller refusing to enter Pressures mode, may not support it."));
+				break;
+		}
+		switch(type) //prints out controller type
+		{
+			case 0:
+				Serial.println(F("Controller type: Unknown Controller."));
+				break;
+			case 1:
+				Serial.println(F("Controller type: DualShock Controller."));
+				break;
+			case 2:
+				Serial.println(F("Controller type: GuitarHero Controller."));
+				Serial.println(F("This controller is not supported!"));
+				break;
+			case 3:
+				Serial.println(F("Controller type: Wireless Sony DualShock Controller."));
+				break;
+		}
 	}
 }
 
@@ -429,7 +430,7 @@ int mapValues(byte value, boolean invert)
 		}
 		else
 		{
-			return int(value*2 - 128*2 + 1); //maps value to range from 0~255 to -255~255
+			return int(+value*2 - 128*2 + 1); //maps value to range from 0~255 to -255~255
 		}
 	}
 }
