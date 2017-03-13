@@ -40,8 +40,8 @@ char buffer[128]; //this is the string that holds the debug output
 const boolean DEBUG_CLK_TIME = true; //weather should clock timings be written to serial: lastClockCycleTime
 const boolean DEBUG_MODE = true; //weather should the current mode be written to the serial: mode
 const boolean DEBUG_CONTROLLER = true; //weather should controller information be written to serial: validController LX RY
-const boolean DEGUB_CONTRLLER_TYPE = false; //weather should controller type be displayed on the console at a new reconnection
-const boolean DEBUG_ENGINE_MATH = true; //weather should engine math be displayed to the console
+const boolean DEGUB_CONTRLLER_TYPE = false; //weather should controller type be displayed on the console at a new reconnection: output from connection attempts
+const boolean DEBUG_ENGINE_MATH = true; //weather should engine math be displayed to the console: accel curve engineDeadzoneOffset calibrationBuffer curvatureSpeed*100 speedL speedR
 
 //Operational modes
 const byte WAIT	= 1; //default mode at startup
@@ -81,6 +81,9 @@ float pAccel;
 float pCurve;
 int speedL = 0; //speed on left engine
 int speedR = 0; //speed on right engine
+
+//Calibration variables
+int calibrationBuffer = engineDeadzoneOffset; //this buffer stores calibration value while calibrating
 
 
 void setup()
@@ -148,7 +151,58 @@ void driveMode() //what happens in drive mode?
 //Calibration mode operation
 void calibrationMode() //what happens in calibration mode?
 {
-	
+	if (validController)
+	{
+		if (ps2x.Button(PSB_CROSS)) //if cross is pressed, test calibration value on the engines.
+		{
+			engL.set(calibrationBuffer);
+			engL.set(calibrationBuffer);
+		}
+		else
+		{
+			engL.set(0); //stop engines if PSB_CROSS is no longer pressed
+			engL.set(0);
+		}
+		
+		if (ps2x.ButtonPressed(PSB_CIRCLE)) //if circle was pressed, reset calibration buffer to 0
+		{
+			calibrationBuffer = 0;
+		}
+		else if (ps2x.ButtonPressed(PSB_SQUARE)) //if square was pressed, reset calibration buffer current value
+		{
+			calibrationBuffer = engineDeadzoneOffset;
+		}
+		else if (ps2x.ButtonPressed(PSB_PAD_UP) or ps2x.ButtonPressed(PSB_PAD_DOWN)) //up or down arrow was pressed, increase or decrease calibration buffer
+		{
+			byte addToBuffer = 0; //stores how much will be added to the buffer
+			if (ps2x.Button(PSB_L1)) //L1 is pressed, increase by a greater amount
+			{
+				addToBuffer += 15;
+			}
+			else if (ps2x.Button(PSB_L2)) //L2 is pressed, increase by a lesser amount
+			{
+				addToBuffer += 1;
+			}
+			else //increase calibration buffer
+			{
+				addToBuffer += 5;
+			}
+			
+			if (ps2x.ButtonPressed(PSB_PAD_UP)) //if arrow up was pressed, increase buffer
+			{
+				calibrationBuffer += addToBuffer;
+			}
+			else //if arrow down was pressed, decrease buffer
+			{
+				calibrationBuffer -= addToBuffer;
+			}
+			calibrationBuffer = constrain(calibrationBuffer, 0, 255); //keep calibration buffer inside pwm range
+		}
+	}
+	else
+	{
+		
+	}
 }
 
 //Allows modes to operate in fixed clock
@@ -223,7 +277,7 @@ boolean isValidController ()
 	}
 	else if (ps2x.Analog(PSS_LY) == 115 and ps2x.Analog(PSS_RX) == 115)
 	{
-		tone(systemBuzzerPin, 5400, 1000); //sound warning buzzer
+		tone(systemBuzzerPin, 540, 1000); //sound warning buzzer
 		validController = false;
 		return false; //controller readings are all 115. This usually happens when high logic voltage level falls down. Low battery
 	}
@@ -295,6 +349,21 @@ void keySequenceManager()
 			}
 			else //if right and select were not pressed
 			{
+				if (ps2x.Button(PSB_R2) and ps2x.Button(PSB_R1) and modusOperandi == DRIVE) //if on DRIVE mode and L1 and L2 are pressed
+				{
+					if (EEPROM.read(0) != engineDeadzoneOffset) //and current calibration data is different from stored on EEPROM
+					{
+						EEPROM.update(0, engineDeadzoneOffset); //update EEPROM with new calibration value (EEPROM <3)
+						Serial.println("Writing calibration to EEPROM"); //write new data to EEPROM
+						tone(systemBuzzerPin, 880.00, 200);
+						delay(200);
+						tone(systemBuzzerPin, 1046.50, 1000);
+					}
+					else
+					{
+						Serial.println("No new data to write!");
+					}
+				}
 				setMode(DRIVE); //initialize drive mode
 			}
 		}
@@ -318,15 +387,38 @@ void setMode(byte newMode)
 				modusOperandi = DRIVE;
 				controllerEnabled = true;
 				setClock(50); //50ms clock time. Setting to 10 ms seemed to cause problems in controller connection
+				if (ps2x.Button(PSB_R2)) //entered drive mode with R2 pressed
+				{
+					if (calibrationBuffer != engineDeadzoneOffset) //the old calibration data is different from new
+					{
+						Serial.println("Using new calibration value");
+						engineDeadzoneOffset = calibrationBuffer; //use new calibration data
+						tone(systemBuzzerPin, 2800, 30); //modify the sound so it states the change
+						delay(100);
+					}
+					else
+					{
+						Serial.println("No new calibration data!");
+					}
+				}
 				tone(systemBuzzerPin, 2800, 50);
 				delay(100);
 				tone(systemBuzzerPin, 2800, 250);
+				delay(250);
+				tone(systemBuzzerPin, 2000, 50);
+				delay(50);
+				tone(systemBuzzerPin, 2200, 50);
+				delay(50);
+				tone(systemBuzzerPin, 1500, 50);
+				delay(50);
+				tone(systemBuzzerPin, 3000, 50);
 				break;
 				
 			case CALIBRATION:
 				modusOperandi = CALIBRATION;
 				controllerEnabled = true;
 				setClock(50);
+				calibrationBuffer = engineDeadzoneOffset; //set calibration buffer to current calibration value
 				for (int i=500;i<1800;i+=80) //make little noise for debugging 
 					{
 						tone(systemBuzzerPin, i, 30);
@@ -355,7 +447,7 @@ void debugManager ()
 	}
 	if (DEBUG_ENGINE_MATH)
 	{
-		sprintf(buffer, "%s %+04i %+04i %+04i %+04i %+04i ", buffer, accel, curve, int(curvatureSpeed*100), speedL, speedR);
+		sprintf(buffer, "%s %+04i %+04i %+04i %+04i %+04i %+04i %+04i ", buffer, accel, curve, engineDeadzoneOffset, calibrationBuffer, int(curvatureSpeed*100), speedL, speedR);
 	}
 	Serial.println(buffer); //print the debug string
 }
