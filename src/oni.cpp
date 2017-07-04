@@ -148,7 +148,7 @@ void modeManager()
 //Wait mode operation
 void waitMode() //what happens in wait mode?
 {
-
+	;
 }
 
 //Drive mode operation
@@ -518,8 +518,8 @@ void engineManager()
 			speedL = curvatureToSpeedReversed;
 		}
 	}
-	// engR.set(speedR);
-	// engL.set(speedL);
+	engR.set(speedR);
+	engL.set(speedL);
 	digitalWrite(systemBuzzerPin, ps2x.Button(PSB_R3)); //control buzzer based on R3 state
 }
 
