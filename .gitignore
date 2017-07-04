@@ -3,3 +3,7 @@
 #*
 ps2ex.c
 rgb_led.c
+.pioenvs
+.piolibdeps
+.clang_complete
+.gcc-flags.json
