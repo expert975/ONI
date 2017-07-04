@@ -1,7 +1,7 @@
-/*	
+/*
 	ONI - Objeto Não Identificado
 	Copyright 2015, 2017 Rodrigo Martins
-	
+
 	This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -16,11 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <Arduino.h>
 #include <PS2X_lib.h> //for v1.6 **Modified**
 #include <L293D.h> // **Modified**
 #include <EEPROM.h> //allows reading and writing from EEPROM
 
-//PS2 controller pins 
+//PS2 controller pins
 #define PS2_DAT 14
 #define PS2_CMD 15
 #define PS2_SEL 16 //yellow
@@ -85,12 +86,27 @@ int speedR = 0; //speed on right engine
 //Calibration variables
 int calibrationBuffer = engineDeadzoneOffset; //this buffer stores calibration value while calibrating
 
+//Necessary headers:
+void detectController();
+void setMode(byte);
+void controllerManager();
+void modeManager();
+void keySequenceManager();
+void debugManager();
+void clockManager();
+void waitMode();
+void calibrationMode();
+void driveMode();
+void engineManager();
+boolean isValidController();
+int mapValues(byte, boolean);
+
 
 void setup()
 {
 	pinMode(systemBuzzerPin, OUTPUT); //main buzzer
 	Serial.begin(115200);
-	
+
 	detectController(); //initialize controller
 	setMode(WAIT); //sets mode to wait at boot
 }
@@ -100,13 +116,13 @@ void loop()
 	clockCycleStartTime = millis(); //clock cycle start
 
 	controllerManager(); //controller validation manager
-	
+
 	modeManager(); //call the right mode function for the current mode
-	
+
 	keySequenceManager(); //detects key sequences and combinations and changes between modes
-	
+
 	debugManager(); //prints debug information
-	
+
 	clockManager(); //clock manager
 }
 
@@ -118,11 +134,11 @@ void modeManager()
 		case WAIT:
 			waitMode();
 			break;
-			
+
 		case DRIVE:
 			driveMode();
 			break;
-			
+
 		case CALIBRATION:
 			calibrationMode();
 			break;
@@ -132,7 +148,7 @@ void modeManager()
 //Wait mode operation
 void waitMode() //what happens in wait mode?
 {
-	
+
 }
 
 //Drive mode operation
@@ -144,7 +160,7 @@ void driveMode() //what happens in drive mode?
 	}
 	else
 	{
-		
+
 	}
 }
 
@@ -163,7 +179,7 @@ void calibrationMode() //what happens in calibration mode?
 			engL.set(0); //stop engines if PSB_CROSS is no longer pressed
 			engL.set(0);
 		}
-		
+
 		if (ps2x.ButtonPressed(PSB_CIRCLE)) //if circle was pressed, reset calibration buffer to 0
 		{
 			calibrationBuffer = 0;
@@ -187,7 +203,7 @@ void calibrationMode() //what happens in calibration mode?
 			{
 				addToBuffer += 5;
 			}
-			
+
 			if (ps2x.ButtonPressed(PSB_PAD_UP)) //if arrow up was pressed, increase buffer
 			{
 				calibrationBuffer += addToBuffer;
@@ -201,7 +217,7 @@ void calibrationMode() //what happens in calibration mode?
 	}
 	else
 	{
-		
+
 	}
 }
 
@@ -212,7 +228,7 @@ void clockManager()
 	if (clockEnabled) //if current mode uses clock
 	{
 		lastClockCycleTime = millis() - clockCycleStartTime; //processing time used in the main loop
-		if (lastClockCycleTime > definedClockTime) //if loop used processing time is greater than the defined clock time 
+		if (lastClockCycleTime > definedClockTime) //if loop used processing time is greater than the defined clock time
 		{
 			longExecutionTime = true; //report long execution
 		}
@@ -220,7 +236,7 @@ void clockManager()
 		{
 			delay(definedClockTime - lastClockCycleTime); //...we still got some time to waste
 		}
-	}	
+	}
 }
 
 //Sets clock time
@@ -297,7 +313,7 @@ void detectController()
 	//Setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
 	error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, false, false);
 	type = ps2x.readType();
-	
+
 	//Serial prints for controller information
 	if (DEGUB_CONTRLLER_TYPE)
 	{
@@ -382,7 +398,7 @@ void setMode(byte newMode)
 				controllerEnabled = true; //enable controller
 				setClock(50); //set clock to 50m
 				break;
-				
+
 			case DRIVE:
 				modusOperandi = DRIVE;
 				controllerEnabled = true;
@@ -413,13 +429,13 @@ void setMode(byte newMode)
 				delay(50);
 				tone(systemBuzzerPin, 3000, 50);
 				break;
-				
+
 			case CALIBRATION:
 				modusOperandi = CALIBRATION;
 				controllerEnabled = true;
 				setClock(50);
 				calibrationBuffer = engineDeadzoneOffset; //set calibration buffer to current calibration value
-				for (int i=500;i<1800;i+=80) //make little noise for debugging 
+				for (int i=500;i<1800;i+=80) //make little noise for debugging
 					{
 						tone(systemBuzzerPin, i, 30);
 						delay(29);
@@ -456,11 +472,11 @@ void engineManager()
 {
 	curve = mapValues(ps2x.Analog(PSS_LX), INVERT_LEFT_STICK); //curves -> horizontal axis, left stick
 	accel = mapValues(ps2x.Analog(PSS_RY), INVERT_RIGHT_STICK); //acceleration -> vertical axis, right stick
-	
+
 	//Set speed according to accel readings. Set curvatureSpeed to 0 in case of no curves
-	speedL = accel; 
+	speedL = accel;
 	speedR = accel;
-	
+
 	curvatureSpeed = 0;
 	int curvatureToSpeed = 0; //could use a byte?
 	int curvatureToSpeedReversed = 0; //could use a byte?
@@ -472,9 +488,9 @@ void engineManager()
 	if (curve != 0 and accel != 0)
 	{
 		curvatureSpeed = float(map(int(((1 - pow(fabsf(pAccel),fabsf(pCurve))) + float(map(TURN_RATE*fabsf(pCurve)*100 - TURN_RATE*fabsf(pAccel)*50,-TURN_RATE*50,TURN_RATE*100,0,TURN_RATE*100))/100)*100),0,100 + TURN_RATE*100,0,100))/100; //really complicated stuff. There's a picture attached to the source code explaining this.
-		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse. 
+		curvatureToSpeed = map(curvatureSpeed*100,0,100,accel,-accel); //when curvatureSpeed is 0, no curves. When 50, one wheel stops. When 100, this wheel spins at the same speed that the accel, but reverse.
 		//probably should not convert into percentages then out
-		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse. 
+		curvatureToSpeedReversed = -map(curvatureSpeed*100,0,100,-accel,accel); //when curvatureSpeed is 0, no curves. When -50, one wheel stops. When -100, this wheel spins at the same speed that the accel, but reverse.
 	}
 	//Setting speeds
 	//For accel > 0 and accel < 0 speedR and speedL get set to the same values, just reversed. It might be possible to remove these statements by incorporating these cases to the main formula
